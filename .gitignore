@@ -1,0 +1,18 @@
+# Build
+/target
+
+# Local editor/OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Environment
+.env
+.env.*
+
+# Crawl outputs (recommend using `-o ./out`)
+/out/
+
+# Caches
+.cache/
+**/.docrawl_cache

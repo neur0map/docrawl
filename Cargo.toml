@@ -1,0 +1,46 @@
+[package]
+name = "docrawl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "gzip", "brotli", "deflate", "cookies", "stream"] }
+
+# Politeness (rate limiting, retries, robots.txt)
+governor = "0.6"
+robotstxt = "0.3"
+reqwest-middleware = "0.4"
+reqwest-retry = "0.7"
+
+# HTML parsing & cleaning
+scraper = "0.20"
+lol_html = "1.2"
+html2md = "0.2"
+soup = "0.5"
+
+# URL & deduping
+url = "2.5"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+
+# Sitemaps
+sitemap = "0.4"
+
+# Serialization / storage
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+
+# CLI & logging
+clap = { version = "4", features = ["derive"] }
+indicatif = "0.17"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Optional: persistent cache
+sled = "0.34"
+
+# Misc
+regex = "1"
+pathdiff = "0.2"
