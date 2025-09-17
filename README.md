@@ -23,6 +23,46 @@ cargo build --release
 
 Binary: `target/release/docrawl`
 
+## Library Usage (Embed in Your Tool)
+
+You can use `docrawl` as a library and ship a single binary for your own CLI or service.
+
+Add to Cargo.toml (using the Git URL until it’s published on crates.io):
+
+```
+[dependencies]
+docrawl = { git = "https://github.com/neur0map/docrawl" }
+url = "2"
+tokio = { version = "1", features = ["full"] }
+```
+
+Minimal programmatic crawl:
+
+```
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cfg = docrawl::CrawlConfig {
+        base_url: url::Url::parse("https://example.com/docs")?,
+        output_dir: std::path::PathBuf::from("./out"),
+        user_agent: format!("mytool/{}", env!("CARGO_PKG_VERSION")),
+        max_depth: Some(2),
+        rate_limit_per_sec: 8,
+        follow_sitemaps: false,
+        concurrency: 8,
+        timeout: None,
+        resume: false,
+        config: docrawl::Config { host_only: true, skip_assets: true, ..Default::default() },
+    };
+    let stats = docrawl::crawl(cfg).await?;
+    eprintln!("pages={} assets={}", stats.pages, stats.assets);
+    Ok(())
+}
+```
+
+Notes:
+- `docrawl::crawl` uses the default on-disk layout (same as the CLI) and returns simple `Stats`.
+- You own the UX: wire your flags to `CrawlConfig` and `Config` to keep one binary.
+
 ## Quick Start
 
 ```
@@ -30,6 +70,7 @@ docrawl "https://example.com/docs"          # default depth=10
 docrawl "https://example.com" --all         # full same‑origin site
 docrawl "https://example.com" --depth 2     # start + links + their links
 docrawl "https://example.com" -o ./export   # choose output root
+docrawl "https://example.com/docs" --fast   # quick smoke test (no assets, higher rate)
 ```
 
 ## CLI
@@ -126,6 +167,13 @@ security_flags:
 - Purpose: persist the visited set across runs so re‑runs don’t re‑fetch unchanged URLs.
 - If the cache cannot be opened (e.g., read‑only filesystem), crawling proceeds with in‑memory dedupe only; Markdown output still works.
 - Frontier persistence for resume: the crawler stores pending URLs in the cache. Use `--resume` to continue from where you left off (e.g., after `--timeout-minutes` or Ctrl‑C). If you don’t use `--resume`, the persisted frontier is cleared at the start and new seeds are used.
+
+## Proxy & macOS Notes
+
+- The HTTP client honors `HTTP_PROXY`/`HTTPS_PROXY` if present. If neither is set, system proxy detection is disabled to avoid rare macOS System Configuration panics.
+- If you need a proxy, export it before running:
+  - `export HTTPS_PROXY=http://user:pass@host:port`
+  - `export HTTP_PROXY=http://user:pass@host:port`
 
 ## Development and Testing
 
