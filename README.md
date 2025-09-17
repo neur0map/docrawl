@@ -38,6 +38,7 @@ docrawl "https://example.com" -o ./export   # choose output root
 - `--all`: Unlimited depth. Crawls the whole same‑origin site (still honors robots).
 - `--depth <n>`: Max link depth from the start page. Default is `10` when `--all` isn’t set.
 - `-o, --output <path>`: Output root; a host‑named folder is created inside.
+- `--concurrency <n>`: Number of parallel fetch workers (bounded). Default: `8`.
 
 Depth is link‑hop depth (not URL path depth). Hub‑style homepages can expose many pages even at small depths.
 
@@ -124,9 +125,7 @@ security_flags:
 
 ## Roadmap
 
-- Bounded concurrency with polite scheduling
 - Conditional GETs (ETag/Last‑Modified)
 - Recursive sitemap index traversal
 - CLI flags mirroring config fields
 - Site‑specific selector presets
-
