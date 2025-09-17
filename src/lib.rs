@@ -16,6 +16,8 @@ pub mod save;
 pub mod security;
 pub mod sitemap;
 pub mod util;
+pub mod sink;
 
 pub use crate::config::Config;
 pub use crate::crawler::{crawl, CrawlConfig};
+pub use crate::sink::{Sink, FileSink, Stats};

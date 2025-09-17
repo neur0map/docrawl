@@ -2,6 +2,22 @@
 name = "docrawl"
 version = "0.1.0"
 edition = "2021"
+description = "Docs-focused crawler library and CLI: crawl documentation sites, extract main content, convert to Markdown, mirror paths, and save with frontmatter."
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/neur0map/docrawl"
+homepage = "https://github.com/neur0map/docrawl"
+documentation = "https://docs.rs/docrawl"
+keywords = ["crawler", "docs", "markdown", "scraping", "http"]
+categories = ["command-line-utilities", "web-programming::http-client", "parsing", "text-processing"]
+exclude = [
+  ".git*",
+  ".github",
+  "target",
+  "out",
+  "out_*",
+  "*.log",
+]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -44,3 +60,9 @@ sled = "0.34"
 # Misc
 regex = "1"
 pathdiff = "0.2"
+async-trait = "0.1"
+bytes = "1"
+
+[lib]
+name = "docrawl"
+path = "src/lib.rs"
