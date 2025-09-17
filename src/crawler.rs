@@ -245,7 +245,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<(), Box<dyn std::error::Error>> {
                 let out_path = path_for_url(&output_dir, &base, &final_url);
 
                 let quarantined = !security_flags.is_empty();
-                if !quarantined {
+                if !quarantined && !config.skip_assets {
                     // Download images and rewrite
                     let mut replace_pairs: Vec<(String, String)> = vec![];
                     for img in page.images.iter() {
@@ -346,6 +346,10 @@ fn build_client(user_agent: &str) -> Result<reqwest_middleware::ClientWithMiddle
         .user_agent(user_agent.to_string())
         .redirect(reqwest::redirect::Policy::limited(10))
         .cookie_store(true)
+        .pool_max_idle_per_host(32)
+        .pool_idle_timeout(std::time::Duration::from_secs(30))
+        .tcp_keepalive(std::time::Duration::from_secs(30))
+        .http2_adaptive_window(true)
         .build()?;
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);

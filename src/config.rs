@@ -11,6 +11,8 @@ pub struct Config {
     #[serde(default)]
     pub allow_svg: bool,
     #[serde(default)]
+    pub skip_assets: bool,
+    #[serde(default)]
     pub max_pages: Option<usize>,
     #[serde(default)]
     pub selectors: Option<Vec<String>>, // preferred CSS selectors for main content
@@ -24,6 +26,7 @@ impl Default for Config {
             host_only: false,
             external_assets: false,
             allow_svg: false,
+            skip_assets: false,
             max_pages: None,
             selectors: None,
             exclude_patterns: vec![],
@@ -47,4 +50,3 @@ pub fn load_config(working_dir: &Path, output_root: &Path) -> Config {
     }
     Config::default()
 }
-

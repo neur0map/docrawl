@@ -44,18 +44,29 @@ async fn main() {
     if args.host_only { cfgfile.host_only = true; }
     if args.external_assets { cfgfile.external_assets = true; }
     if args.allow_svg { cfgfile.allow_svg = true; }
+    if args.no_assets { cfgfile.skip_assets = true; }
     if let Some(m) = args.max_pages { cfgfile.max_pages = Some(m); }
     if !args.selectors.is_empty() { cfgfile.selectors = Some(args.selectors.clone()); }
     if !args.exclude_patterns.is_empty() { cfgfile.exclude_patterns = args.exclude_patterns.clone(); }
+
+    // Fast preset
+    let rate = args.rate.unwrap_or(2);
+    let concurrency = args.concurrency.unwrap_or(8).max(1);
+    let (rate, concurrency) = if args.fast { (rate.max(16), concurrency.max(16)) } else { (rate, concurrency) };
+    if args.fast {
+        cfgfile.skip_assets = true;
+        cfgfile.external_assets = false;
+        cfgfile.allow_svg = false;
+    }
 
     let cfg = crawler::CrawlConfig {
         base_url,
         output_dir: output_root,
         user_agent: format!("docrawl/{}", env!("CARGO_PKG_VERSION")),
         max_depth,
-        rate_limit_per_sec: args.rate.unwrap_or(2),
+        rate_limit_per_sec: rate,
         follow_sitemaps: args.all,
-        concurrency: args.concurrency.unwrap_or(8).max(1),
+        concurrency,
         timeout: args.timeout_minutes.map(|m| Duration::from_secs(m.saturating_mul(60))),
         resume: args.resume,
         config: cfgfile,

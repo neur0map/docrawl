@@ -59,4 +59,12 @@ pub struct Args {
     /// Resume from previous run using the persisted frontier in the cache.
     #[arg(long, action = ArgAction::SetTrue)]
     pub resume: bool,
+
+    /// Skip downloading images/assets (fastest).
+    #[arg(long = "no-assets", action = ArgAction::SetTrue)]
+    pub no_assets: bool,
+
+    /// Fast preset: higher rate/concurrency and no assets.
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub fast: bool,
 }

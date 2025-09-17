@@ -45,9 +45,11 @@ docrawl "https://example.com" -o ./export   # choose output root
 - `--host-only`: Restrict scope to the exact origin (scheme+host+port).
 - `--external-assets`: Allow downloading images from other domains.
 - `--allow-svg`: Permit saving SVG images.
+- `--no-assets`: Skip image downloads (fastest).
 - `--max-pages <n>`: Stop after writing this many pages.
 - `--selector <CSS>`: Preferred CSS selector for content (repeatable).
 - `--exclude <REGEX>`: Exclude URLs matching the regex (repeatable).
+- `--fast`: Preset for quick crawls: raises `--rate`/`--concurrency` to at least 16 and implies `--no-assets`.
 
 Depth is link‑hop depth (not URL path depth). Hub‑style homepages can expose many pages even at small depths.
 
