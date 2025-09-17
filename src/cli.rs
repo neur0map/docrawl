@@ -51,4 +51,12 @@ pub struct Args {
     /// Regex patterns to exclude URLs (can be repeated).
     #[arg(long = "exclude")]
     pub exclude_patterns: Vec<String>,
+
+    /// Stop the crawl after N minutes (graceful shutdown).
+    #[arg(long = "timeout-minutes")]
+    pub timeout_minutes: Option<u64>,
+
+    /// Resume from previous run using the persisted frontier in the cache.
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub resume: bool,
 }

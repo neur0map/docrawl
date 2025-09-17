@@ -14,6 +14,7 @@ mod security;
 
 use clap::Parser;
 use tracing::{error, info};
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() {
@@ -55,6 +56,8 @@ async fn main() {
         rate_limit_per_sec: args.rate.unwrap_or(2),
         follow_sitemaps: args.all,
         concurrency: args.concurrency.unwrap_or(8).max(1),
+        timeout: args.timeout_minutes.map(|m| Duration::from_secs(m.saturating_mul(60))),
+        resume: args.resume,
         config: cfgfile,
     };
 

@@ -1,13 +1,24 @@
 use std::io::Cursor;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use sitemap::reader::{SiteMapEntity, SiteMapReader};
 use url::Url;
 
 pub async fn fetch_and_parse_sitemaps(client: &reqwest_middleware::ClientWithMiddleware, origin: &Url) -> Vec<Url> {
-    let sitemap_url = match origin.join("/sitemap.xml") { Ok(u) => u, Err(_) => return vec![] };
+    let start = match origin.join("/sitemap.xml") { Ok(u) => u, Err(_) => return vec![] };
     let mut seen: HashSet<Url> = HashSet::new();
     let mut out: Vec<Url> = vec![];
-    fetch_sitemap_recursive(client, &sitemap_url, &mut seen, &mut out, 3);
+    let mut q: VecDeque<(Url, usize)> = VecDeque::new();
+    q.push_back((start, 3));
+    while let Some((url, depth)) = q.pop_front() {
+        if depth == 0 || !seen.insert(url.clone()) { continue; }
+        let txt = match client.get(url.clone()).send().await {
+            Ok(resp) if resp.status().is_success() => resp.text().await.unwrap_or_default(),
+            _ => continue,
+        };
+        let mut nested: Vec<Url> = vec![];
+        parse_sitemap_str(&txt, &mut out, &mut nested);
+        for n in nested { q.push_back((n, depth - 1)); }
+    }
     out
 }
 
@@ -22,17 +33,4 @@ fn parse_sitemap_str(txt: &str, urls_out: &mut Vec<Url>, nested_out: &mut Vec<Ur
     }
 }
 
-fn fetch_sitemap_recursive(
-    client: &reqwest_middleware::ClientWithMiddleware,
-    url: &Url,
-    seen: &mut HashSet<Url>,
-    out: &mut Vec<Url>,
-    depth: usize,
-) {
-    if depth == 0 || !seen.insert(url.clone()) { return; }
-    let rt = tokio::runtime::Handle::current();
-    let txt = rt.block_on(async { match client.get(url.clone()).send().await { Ok(resp) if resp.status().is_success() => resp.text().await.unwrap_or_default(), _ => String::new(), } });
-    let mut nested: Vec<Url> = vec![];
-    parse_sitemap_str(&txt, out, &mut nested);
-    for n in nested.into_iter() { fetch_sitemap_recursive(client, &n, seen, out, depth - 1); }
-}
+// iterative approach above; no recursion needed

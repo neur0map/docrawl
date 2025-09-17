@@ -22,6 +22,7 @@ use crate::security::{is_safe_image_content_type, sanitize_html_for_md, sanitize
 use crate::sitemap::fetch_and_parse_sitemaps;
 use crate::util::{is_same_host, site_name_from_url, normalize_url, path_for_asset, path_for_url, relpath};
 use regex::Regex;
+use std::time::Duration;
 
 pub struct CrawlConfig {
     pub base_url: Url,
@@ -31,6 +32,8 @@ pub struct CrawlConfig {
     pub rate_limit_per_sec: u32,
     pub follow_sitemaps: bool,
     pub concurrency: usize,
+    pub timeout: Option<Duration>,
+    pub resume: bool,
     pub config: Config,
 }
 
@@ -76,6 +79,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<(), Box<dyn std::error::Error>> {
     pb.enable_steady_tick(std::time::Duration::from_millis(80));
     let pb_shared = pb.clone();
 
+
     // Shared state
     let exclude_res = Arc::new(exclude_res);
     let base_arc = Arc::new(base_origin);
@@ -86,6 +90,16 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<(), Box<dyn std::error::Error>> {
     let semaphore = Arc::new(Semaphore::new(cfg.concurrency));
     let pending = Arc::new(AtomicUsize::new(0));
     let notify = Arc::new(Notify::new());
+    // Set up timeout if provided (after notify creation)
+    if let Some(dur) = cfg.timeout {
+        let stop_flag_timeout = stop_flag.clone();
+        let notify_timeout = notify.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(dur).await;
+            stop_flag_timeout.store(true, Ordering::SeqCst);
+            notify_timeout.notify_waiters();
+        });
+    }
 
     // Channel for discovered links from workers
     let (tx, mut rx) = mpsc::unbounded_channel::<(Url, usize)>();
@@ -131,10 +145,16 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<(), Box<dyn std::error::Error>> {
             let pb_shared = pb_shared.clone();
             let stop_flag_task = stop_flag.clone();
             let tx = tx_outer.clone();
+            // Persist to frontier before spawn
+            if let Some(c) = &cache {
+                let canon = normalize_url(&url);
+                let _ = c.add_frontier(&canon, depth);
+            }
             tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
                 // Deduplicate
                 let canon = normalize_url(&url);
+                if let Some(c) = &cache { let _ = c.remove_frontier(&canon); }
                 {
                     let mut vis = visited.write().await;
                     if !vis.insert(canon.clone()) {
@@ -279,7 +299,24 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Seed work
-    for (u, d) in seeds { enqueue(u, d); }
+    if let Some(c) = &cache {
+        if cfg.resume {
+            if let Ok(list) = c.list_frontier() {
+                if !list.is_empty() {
+                    for (u, d) in list { if let Ok(url) = Url::parse(&u) { enqueue(url, d); } }
+                } else {
+                    for (u, d) in seeds { enqueue(u, d); }
+                }
+            } else {
+                for (u, d) in seeds { enqueue(u, d); }
+            }
+        } else {
+            let _ = c.clear_frontier();
+            for (u, d) in seeds { enqueue(u, d); }
+        }
+    } else {
+        for (u, d) in seeds { enqueue(u, d); }
+    }
 
     // Wait for all tasks; process discovered links as they arrive
     while pending.load(Ordering::SeqCst) > 0 {

@@ -39,6 +39,15 @@ docrawl "https://example.com" -o ./export   # choose output root
 - `--depth <n>`: Max link depth from the start page. Default is `10` when `--all` isn’t set.
 - `-o, --output <path>`: Output root; a host‑named folder is created inside.
 - `--concurrency <n>`: Number of parallel fetch workers (bounded). Default: `8`.
+- `--rate <n>`: Global requests per second. Default: `2`.
+- `--timeout-minutes <n>`: Graceful shutdown after N minutes. The crawler stops scheduling new work, drains active tasks, writes the manifest, and exits.
+- `--resume`: Resume from the previous run using the persisted frontier (see Cache). Useful after a timeout or manual stop.
+- `--host-only`: Restrict scope to the exact origin (scheme+host+port).
+- `--external-assets`: Allow downloading images from other domains.
+- `--allow-svg`: Permit saving SVG images.
+- `--max-pages <n>`: Stop after writing this many pages.
+- `--selector <CSS>`: Preferred CSS selector for content (repeatable).
+- `--exclude <REGEX>`: Exclude URLs matching the regex (repeatable).
 
 Depth is link‑hop depth (not URL path depth). Hub‑style homepages can expose many pages even at small depths.
 
@@ -114,6 +123,7 @@ security_flags:
 - Location: `<output_root>/.docrawl_cache` (sled key–value store).
 - Purpose: persist the visited set across runs so re‑runs don’t re‑fetch unchanged URLs.
 - If the cache cannot be opened (e.g., read‑only filesystem), crawling proceeds with in‑memory dedupe only; Markdown output still works.
+- Frontier persistence for resume: the crawler stores pending URLs in the cache. Use `--resume` to continue from where you left off (e.g., after `--timeout-minutes` or Ctrl‑C). If you don’t use `--resume`, the persisted frontier is cleared at the start and new seeds are used.
 
 ## Development and Testing
 

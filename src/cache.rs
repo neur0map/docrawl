@@ -5,6 +5,7 @@ pub struct Cache {
     db: Db,
     visited: sled::Tree,
     meta: sled::Tree,
+    frontier: sled::Tree,
 }
 
 impl Cache {
@@ -12,7 +13,8 @@ impl Cache {
         let db = sled::open(path)?;
         let visited = db.open_tree("visited")?;
         let meta = db.open_tree("meta")?;
-        Ok(Self { db, visited, meta })
+        let frontier = db.open_tree("frontier")?;
+        Ok(Self { db, visited, meta, frontier })
     }
 
     // returns true if was not present and inserted (i.e., first visit)
@@ -48,4 +50,37 @@ impl Drop for Cache {
 pub struct ResourceMeta {
     pub etag: Option<String>,
     pub last_modified: Option<String>,
+}
+
+impl Cache {
+    pub fn add_frontier(&self, url: &str, depth: usize) -> sled::Result<()> {
+        let mut buf = [0u8; 8];
+        buf[..8].copy_from_slice(&(depth as u64).to_le_bytes());
+        self.frontier.insert(url.as_bytes(), &buf[..])?;
+        Ok(())
+    }
+
+    pub fn remove_frontier(&self, url: &str) -> sled::Result<()> {
+        let _ = self.frontier.remove(url.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn list_frontier(&self) -> sled::Result<Vec<(String, usize)>> {
+        let mut out = vec![];
+        for kv in self.frontier.iter() {
+            let (k, v) = kv?;
+            let url = String::from_utf8_lossy(k.as_ref()).to_string();
+            let mut arr = [0u8;8];
+            let len = v.len().min(8);
+            arr[..len].copy_from_slice(&v[..len]);
+            let depth = u64::from_le_bytes(arr) as usize;
+            out.push((url, depth));
+        }
+        Ok(out)
+    }
+
+    pub fn clear_frontier(&self) -> sled::Result<()> {
+        self.frontier.clear()?;
+        Ok(())
+    }
 }
