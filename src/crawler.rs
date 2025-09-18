@@ -5,10 +5,11 @@ use std::sync::{Arc, atomic::{AtomicUsize, AtomicBool, Ordering}};
 
 use governor::{Quota, RateLimiter};
 use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Instant;
 use reqwest_middleware::ClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff; 
 use reqwest_retry::RetryTransientMiddleware;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 use url::Url;
 use tokio::sync::{Semaphore, RwLock, Mutex, Notify, mpsc};
 
@@ -74,10 +75,20 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
     let saved_assets = Arc::new(AtomicUsize::new(0));
     let stop_flag = Arc::new(AtomicBool::new(false));
 
+    // Create single progress bar with better formatting
     let pb = ProgressBar::new_spinner();
-    pb.set_style(ProgressStyle::with_template("{spinner} {msg}").unwrap());
+    pb.set_style(
+        ProgressStyle::with_template(
+            "{spinner:.cyan} [{elapsed_precise}] {msg} | Pages: {pos} | {per_sec}"
+        ).unwrap()
+        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
+    );
     pb.enable_steady_tick(std::time::Duration::from_millis(80));
+
     let pb_shared = pb.clone();
+
+    // Start time for calculating crawl speed
+    let start_time = Instant::now();
 
 
     // Shared state
@@ -205,7 +216,15 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
                 // Fetch
                 let depth_msg = depth;
-                pb_shared.set_message(format!("Fetching {} (depth {})", url, depth_msg));
+                let pending_count = pending_ctr.load(Ordering::SeqCst);
+                let url_display = if url.path() == "/" {
+                    url.host_str().unwrap_or("unknown")
+                } else {
+                    url.path().trim_start_matches('/')
+                };
+                pb_shared.set_message(format!("Fetching: {} (depth {}) | Pending: {}",
+                    url_display, depth_msg, pending_count));
+                pb_shared.set_position(saved_pages.load(Ordering::SeqCst) as u64);
                 limiter.until_ready().await;
                 let resp = match req.send().await { Ok(r) => r, Err(e) => { warn!(error=%e, "request failed");
                     pending_ctr.fetch_sub(1, Ordering::SeqCst);
@@ -291,7 +310,25 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                 let new_total = saved_pages.fetch_add(1, Ordering::SeqCst) + 1;
                 if let Some(max) = config.max_pages { if new_total >= max { stop_flag_task.store(true, Ordering::SeqCst); } }
 
-                info!("Saved {}", out_path.display());
+                // Update progress with better path display
+                let pages_count = saved_pages.load(Ordering::SeqCst);
+                pb_shared.set_position(pages_count as u64);
+
+                // Show folder/file name instead of just index.md
+                let display_name = if out_path.file_name().unwrap_or_default() == "index.md" {
+                    // Show parent directory name for index.md files
+                    out_path.parent()
+                        .and_then(|p| p.file_name())
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "root".to_string())
+                } else {
+                    out_path.file_name().unwrap_or_default().to_string_lossy().to_string()
+                };
+
+                pb_shared.set_message(format!("Saved: {}", display_name));
+
+                // Use debug instead of info to avoid interfering with progress bar
+                debug!("Saved {}", out_path.display());
 
                 // Enqueue links
                 let next_depth = depth.saturating_add(1);
@@ -349,10 +386,19 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
     }
     }
 
+    let pb_main = pb.clone();
+    pb_main.set_message(format!("Starting crawl of {}", base_arc.host_str().unwrap_or("site")));
+
     // Wait for all tasks; process discovered links as they arrive
     loop {
         let pending_count = pending.load(Ordering::SeqCst);
         debug!("Main loop: pending tasks = {}", pending_count);
+
+        // Update pending count in UI
+        if pending_count > 0 {
+            pb_main.set_message(format!("Crawling {} | Pending: {}",
+                base_arc.host_str().unwrap_or("site"), pending_count));
+        }
 
         if pending_count == 0 {
             // Check if there are any messages in the channel before exiting
@@ -380,7 +426,13 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
         }
     }
 
-    pb.finish_and_clear();
+    // Show final statistics
+    let total_pages = saved_pages.load(Ordering::SeqCst);
+    let total_assets = saved_assets.load(Ordering::SeqCst);
+    let elapsed = start_time.elapsed();
+
+    pb.finish_with_message(format!("Done! Crawled {} pages, {} assets in {:.1}s",
+        total_pages, total_assets, elapsed.as_secs_f32()));
     let _ = sink.finalize().await;
     Ok(Stats { pages: saved_pages.load(Ordering::SeqCst), assets: saved_assets.load(Ordering::SeqCst) })
 }

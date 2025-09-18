@@ -3,11 +3,11 @@ use std::path::PathBuf;
 mod cli;
 
 use clap::Parser;
-use tracing::{error, info};
+use tracing::error;
 
 #[tokio::main]
 async fn main() {
-    let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".to_string());
     tracing_subscriber::fmt()
         .with_target(false)
         .with_max_level(match filter.as_str() {
@@ -16,7 +16,7 @@ async fn main() {
             "info" => tracing::Level::INFO,
             "warn" => tracing::Level::WARN,
             "error" => tracing::Level::ERROR,
-            _ => tracing::Level::INFO,
+            _ => tracing::Level::WARN,
         })
         .init();
 
@@ -69,11 +69,9 @@ async fn main() {
         config: cfgfile,
     };
 
-    info!("Starting crawl");
+    println!("Starting crawl...");
     if let Err(e) = docrawl::crawl(cfg).await {
         error!(error = %e, "Crawl failed");
         std::process::exit(1);
     }
-
-    info!("Crawl complete");
 }
