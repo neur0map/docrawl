@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::{Arc, atomic::{AtomicUsize, AtomicBool, Ordering}};
+use futures::future::join_all;
 
 use governor::{Quota, RateLimiter};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -70,6 +71,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
         .iter()
         .filter_map(|p| Regex::new(p).ok())
         .collect();
+    let seeds_count = seeds.len();
 
     let saved_pages = Arc::new(AtomicUsize::new(0));
     let saved_assets = Arc::new(AtomicUsize::new(0));
@@ -273,26 +275,47 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
                 let quarantined = !security_flags.is_empty();
                 if !quarantined && !config.skip_assets {
-                    // Download images and rewrite
+                    // Download images in parallel without rate limiting
                     let mut replace_pairs: Vec<(String, String)> = vec![];
+                    let mut asset_futures = vec![];
+
                     for img in page.images.iter() {
                         if !config.external_assets && !within_scope(&base, img, &config) { continue; }
                         let asset_path = path_for_asset(&output_dir, &base, img);
-                        limiter.until_ready().await;
-                        match fetch_asset_checked(&client, img.clone(), config.allow_svg).await {
-                            Ok((ct, bytes)) => {
-                                if let Err(e) = sink.save_asset(img, &asset_path, ct.as_deref(), bytes).await {
-                                    warn!(error=%e, "asset save failed: {}", img);
-                                } else {
-                                    saved_assets.fetch_add(1, Ordering::SeqCst);
+                        let img_url = img.clone();
+                        let client = client.clone();
+                        let config = config.clone();
+
+                        // Spawn parallel asset fetches without rate limiting
+                        let fut = async move {
+                            match fetch_asset_checked(&client, img_url.clone(), config.allow_svg).await {
+                                Ok((ct, bytes)) => Some((img_url, asset_path.clone(), ct, bytes)),
+                                Err(e) => {
+                                    warn!(error=%e, "asset download failed: {}", img_url);
+                                    None
                                 }
                             }
-                            Err(e) => { warn!(error=%e, "asset download failed: {}", img); }
-                        }
-                        if let Some(rel) = relpath(&out_path, &asset_path) {
-                            replace_pairs.push((img.as_str().to_string(), rel.to_string_lossy().to_string()));
+                        };
+                        asset_futures.push(fut);
+                    }
+
+                    // Wait for all assets to download in parallel
+                    let asset_results = join_all(asset_futures).await;
+
+                    for result in asset_results {
+                        if let Some((img_url, asset_path, ct, bytes)) = result {
+                            if let Err(e) = sink.save_asset(&img_url, &asset_path, ct.as_deref(), bytes).await {
+                                warn!(error=%e, "asset save failed: {}", img_url);
+                            } else {
+                                saved_assets.fetch_add(1, Ordering::SeqCst);
+                            }
+
+                            if let Some(rel) = relpath(&out_path, &asset_path) {
+                                replace_pairs.push((img_url.as_str().to_string(), rel.to_string_lossy().to_string()));
+                            }
                         }
                     }
+
                     if !replace_pairs.is_empty() { md = rewrite_md_images(md, &replace_pairs); }
                 }
 
@@ -391,6 +414,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
     // Track if we've processed any URLs yet
     let mut has_processed_any = false;
+    let follow_sitemaps = cfg.follow_sitemaps;
 
     // Wait for all tasks; process discovered links as they arrive
     loop {
@@ -415,10 +439,19 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                     continue;
                 }
                 Err(_) => {
-                    // Give a small grace period for initial tasks to start
+                    // Give a grace period for initial tasks to start, especially in sitemap mode
                     if !has_processed_any && total_processed == 0 {
                         debug!("No tasks started yet, waiting for initial processing...");
-                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                        // Much longer wait for sitemap mode with many seeds
+                        let wait_time = if follow_sitemaps && seeds_count > 10 {
+                            1000 + (seeds_count * 10).min(2000) // 1-3 seconds based on seed count
+                        } else if follow_sitemaps {
+                            500
+                        } else {
+                            100
+                        };
+                        debug!("Waiting {}ms for {} seeds to start processing", wait_time, seeds_count);
+                        tokio::time::sleep(tokio::time::Duration::from_millis(wait_time as u64)).await;
                         // Check one more time
                         if pending.load(Ordering::SeqCst) > 0 {
                             continue;

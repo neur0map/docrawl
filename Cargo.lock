@@ -523,6 +523,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "futures",
  "governor",
  "html2md",
  "indicatif",

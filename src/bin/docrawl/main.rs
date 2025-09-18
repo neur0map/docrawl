@@ -39,10 +39,9 @@ async fn main() {
     if !args.selectors.is_empty() { cfgfile.selectors = Some(args.selectors.clone()); }
     if !args.exclude_patterns.is_empty() { cfgfile.exclude_patterns = args.exclude_patterns.clone(); }
 
-    // Fast preset
-    let rate = args.rate.unwrap_or(2);
-    let concurrency = args.concurrency.unwrap_or(8).max(1);
-    let (rate, concurrency) = if args.fast { (rate.max(16), concurrency.max(16)) } else { (rate, concurrency) };
+    // Fast preset with more aggressive defaults
+    let rate = args.rate.unwrap_or(if args.fast { 50 } else { 10 });
+    let concurrency = args.concurrency.unwrap_or(if args.fast { 32 } else { 16 }).max(1);
     if args.fast {
         cfgfile.skip_assets = true;
         cfgfile.external_assets = false;
