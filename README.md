@@ -1,6 +1,12 @@
+<div align="center">
+
 # docrawl
 
 A documentation-focused web crawler that converts sites to clean Markdown while preserving structure and staying polite.
+
+[**Demo Video**](https://youtu.be/aEBA0nFWaPE) • [**Crates.io**](https://crates.io/crates/docrawl) • [**GitHub**](https://github.com/neur0map/docrawl)
+
+</div>
 
 ## Installation
 
