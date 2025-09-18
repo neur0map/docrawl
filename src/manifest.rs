@@ -39,7 +39,14 @@ impl ManifestRecorder {
         }
     }
 
-    pub fn record(&mut self, url: &str, path: &Path, title: &str, quarantined: bool, security_flags: Vec<String>) {
+    pub fn record(
+        &mut self,
+        url: &str,
+        path: &Path,
+        title: &str,
+        quarantined: bool,
+        security_flags: Vec<String>,
+    ) {
         let rec = PageRecord {
             id: Uuid::new_v4().to_string(),
             url: url.to_string(),
@@ -57,8 +64,11 @@ impl ManifestRecorder {
 
     pub fn write(&self) -> std::io::Result<()> {
         let path = self.out_dir_host.join("manifest.json");
-        let json = serde_json::to_string_pretty(&self.manifest).unwrap_or_else(|_| "{}".to_string());
-        if let Some(parent) = path.parent() { fs::create_dir_all(parent)?; }
+        let json =
+            serde_json::to_string_pretty(&self.manifest).unwrap_or_else(|_| "{}".to_string());
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
         fs::write(path, json)
     }
 }

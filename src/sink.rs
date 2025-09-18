@@ -48,7 +48,10 @@ pub struct FileSink {
 impl FileSink {
     pub fn new(root_host_dir: PathBuf) -> Self {
         let manifest = ManifestRecorder::new(root_host_dir.clone());
-        Self { root_host_dir, manifest: Mutex::new(manifest) }
+        Self {
+            root_host_dir,
+            manifest: Mutex::new(manifest),
+        }
     }
 }
 
@@ -63,7 +66,11 @@ impl Sink for FileSink {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Validate that the destination is within our root directory
         if !dest.starts_with(&self.root_host_dir) {
-            return Err(format!("Destination path {:?} is outside root directory {:?}", dest, self.root_host_dir).into());
+            return Err(format!(
+                "Destination path {:?} is outside root directory {:?}",
+                dest, self.root_host_dir
+            )
+            .into());
         }
 
         ensure_parent_dir(dest)?;
@@ -82,12 +89,22 @@ impl Sink for FileSink {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Validate that the path is within our root directory
         if !path.starts_with(&self.root_host_dir) {
-            return Err(format!("Page path {:?} is outside root directory {:?}", path, self.root_host_dir).into());
+            return Err(format!(
+                "Page path {:?} is outside root directory {:?}",
+                path, self.root_host_dir
+            )
+            .into());
         }
 
         write_markdown_with_frontmatter(path, title, url.as_str(), markdown, security_flags)?;
         let mut man = self.manifest.lock().unwrap();
-        man.record(url.as_str(), path, title, quarantined, security_flags.to_vec());
+        man.record(
+            url.as_str(),
+            path,
+            title,
+            quarantined,
+            security_flags.to_vec(),
+        );
         Ok(())
     }
 
@@ -97,4 +114,3 @@ impl Sink for FileSink {
         Ok(())
     }
 }
-

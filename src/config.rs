@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub host_only: bool,
@@ -20,19 +20,7 @@ pub struct Config {
     pub exclude_patterns: Vec<String>, // regex strings
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            host_only: false,
-            external_assets: false,
-            allow_svg: false,
-            skip_assets: false,
-            max_pages: None,
-            selectors: None,
-            exclude_patterns: vec![],
-        }
-    }
-}
+// Default is derived; serde #[serde(default)] supplies field defaults
 
 pub fn load_config(working_dir: &Path, output_root: &Path) -> Config {
     let candidates = [

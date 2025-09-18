@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use clap::{ArgAction, Parser};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug, Clone)]
 #[command(
@@ -73,4 +73,3 @@ pub struct Args {
     #[arg(long, action = ArgAction::SetTrue)]
     pub fast: bool,
 }
-

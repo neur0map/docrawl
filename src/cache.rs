@@ -1,5 +1,5 @@
-use sled::Db;
 use serde::{Deserialize, Serialize};
+use sled::Db;
 
 pub struct Cache {
     db: Db,
@@ -14,7 +14,12 @@ impl Cache {
         let visited = db.open_tree("visited")?;
         let meta = db.open_tree("meta")?;
         let frontier = db.open_tree("frontier")?;
-        Ok(Self { db, visited, meta, frontier })
+        Ok(Self {
+            db,
+            visited,
+            meta,
+            frontier,
+        })
     }
 
     // returns true if was not present and inserted (i.e., first visit)
@@ -30,7 +35,9 @@ impl Cache {
         if let Some(v) = self.meta.get(url.as_bytes())? {
             let m: ResourceMeta = serde_json::from_slice(&v).unwrap_or_default();
             Ok(Some(m))
-        } else { Ok(None) }
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn set_meta(&self, url: &str, meta: &ResourceMeta) -> sled::Result<()> {
@@ -70,7 +77,7 @@ impl Cache {
         for kv in self.frontier.iter() {
             let (k, v) = kv?;
             let url = String::from_utf8_lossy(k.as_ref()).to_string();
-            let mut arr = [0u8;8];
+            let mut arr = [0u8; 8];
             let len = v.len().min(8);
             arr[..len].copy_from_slice(&v[..len]);
             let depth = u64::from_le_bytes(arr) as usize;

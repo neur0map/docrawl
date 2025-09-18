@@ -31,17 +31,34 @@ async fn main() {
     };
 
     let mut cfgfile = docrawl::Config::default();
-    if args.host_only { cfgfile.host_only = true; }
-    if args.external_assets { cfgfile.external_assets = true; }
-    if args.allow_svg { cfgfile.allow_svg = true; }
-    if args.no_assets { cfgfile.skip_assets = true; }
-    if let Some(m) = args.max_pages { cfgfile.max_pages = Some(m); }
-    if !args.selectors.is_empty() { cfgfile.selectors = Some(args.selectors.clone()); }
-    if !args.exclude_patterns.is_empty() { cfgfile.exclude_patterns = args.exclude_patterns.clone(); }
+    if args.host_only {
+        cfgfile.host_only = true;
+    }
+    if args.external_assets {
+        cfgfile.external_assets = true;
+    }
+    if args.allow_svg {
+        cfgfile.allow_svg = true;
+    }
+    if args.no_assets {
+        cfgfile.skip_assets = true;
+    }
+    if let Some(m) = args.max_pages {
+        cfgfile.max_pages = Some(m);
+    }
+    if !args.selectors.is_empty() {
+        cfgfile.selectors = Some(args.selectors.clone());
+    }
+    if !args.exclude_patterns.is_empty() {
+        cfgfile.exclude_patterns = args.exclude_patterns.clone();
+    }
 
     // Fast preset with more aggressive defaults
     let rate = args.rate.unwrap_or(if args.fast { 50 } else { 10 });
-    let concurrency = args.concurrency.unwrap_or(if args.fast { 32 } else { 16 }).max(1);
+    let concurrency = args
+        .concurrency
+        .unwrap_or(if args.fast { 32 } else { 16 })
+        .max(1);
     if args.fast {
         cfgfile.skip_assets = true;
         cfgfile.external_assets = false;
@@ -53,7 +70,11 @@ async fn main() {
         .clone()
         .unwrap_or_else(|| std::env::current_dir().unwrap());
 
-    let max_depth = if args.all { None } else { Some(args.depth.unwrap_or(10)) };
+    let max_depth = if args.all {
+        None
+    } else {
+        Some(args.depth.unwrap_or(10))
+    };
 
     let cfg = docrawl::CrawlConfig {
         base_url,
@@ -63,7 +84,9 @@ async fn main() {
         rate_limit_per_sec: rate,
         follow_sitemaps: args.all,
         concurrency,
-        timeout: args.timeout_minutes.map(|m| std::time::Duration::from_secs(m.saturating_mul(60))),
+        timeout: args
+            .timeout_minutes
+            .map(|m| std::time::Duration::from_secs(m.saturating_mul(60))),
         resume: args.resume,
         config: cfgfile,
     };

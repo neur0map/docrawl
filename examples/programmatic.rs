@@ -12,9 +12,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         concurrency: 8,
         timeout: None,
         resume: false,
-        config: docrawl::Config { host_only: true, skip_assets: true, ..Default::default() },
+        config: docrawl::Config {
+            host_only: true,
+            skip_assets: true,
+            ..Default::default()
+        },
     };
     docrawl::crawl(cfg).await?;
     Ok(())
 }
-
