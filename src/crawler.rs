@@ -389,17 +389,23 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
     let pb_main = pb.clone();
     pb_main.set_message(format!("Starting crawl of {}", base_arc.host_str().unwrap_or("site")));
 
+    // Track if we've processed any URLs yet
+    let mut has_processed_any = false;
+
     // Wait for all tasks; process discovered links as they arrive
     loop {
         let pending_count = pending.load(Ordering::SeqCst);
-        debug!("Main loop: pending tasks = {}", pending_count);
+        let total_processed = saved_pages.load(Ordering::SeqCst) + saved_assets.load(Ordering::SeqCst);
+        debug!("Main loop: pending tasks = {}, total processed = {}", pending_count, total_processed);
 
         // Update pending count in UI
         if pending_count > 0 {
             pb_main.set_message(format!("Crawling {} | Pending: {}",
                 base_arc.host_str().unwrap_or("site"), pending_count));
+            has_processed_any = true;
         }
 
+        // Only exit if pending is 0 AND we've either processed something or waited a bit
         if pending_count == 0 {
             // Check if there are any messages in the channel before exiting
             match rx.try_recv() {
@@ -409,6 +415,15 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                     continue;
                 }
                 Err(_) => {
+                    // Give a small grace period for initial tasks to start
+                    if !has_processed_any && total_processed == 0 {
+                        debug!("No tasks started yet, waiting for initial processing...");
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                        // Check one more time
+                        if pending.load(Ordering::SeqCst) > 0 {
+                            continue;
+                        }
+                    }
                     debug!("No pending tasks and no messages in channel, exiting");
                     break;
                 }
