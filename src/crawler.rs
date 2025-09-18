@@ -217,15 +217,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                 }
 
                 // Fetch
-                let depth_msg = depth;
-                let pending_count = pending_ctr.load(Ordering::SeqCst);
-                let url_display = if url.path() == "/" {
-                    url.host_str().unwrap_or("unknown")
-                } else {
-                    url.path().trim_start_matches('/')
-                };
-                pb_shared.set_message(format!("Fetching: {} (depth {}) | Pending: {}",
-                    url_display, depth_msg, pending_count));
+                // Keep position updated but avoid per-task messages to reduce flicker
                 pb_shared.set_position(saved_pages.load(Ordering::SeqCst) as u64);
                 limiter.until_ready().await;
                 let resp = match req.send().await { Ok(r) => r, Err(e) => { warn!(error=%e, "request failed");
@@ -291,7 +283,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                             match fetch_asset_checked(&client, img_url.clone(), config.allow_svg).await {
                                 Ok((ct, bytes)) => Some((img_url, asset_path.clone(), ct, bytes)),
                                 Err(e) => {
-                                    warn!(error=%e, "asset download failed: {}", img_url);
+                                    debug!(error=%e, "asset download failed: {}", img_url);
                                     None
                                 }
                             }
@@ -305,7 +297,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                     for result in asset_results {
                         if let Some((img_url, asset_path, ct, bytes)) = result {
                             if let Err(e) = sink.save_asset(&img_url, &asset_path, ct.as_deref(), bytes).await {
-                                warn!(error=%e, "asset save failed: {}", img_url);
+                                debug!(error=%e, "asset save failed: {}", img_url);
                             } else {
                                 saved_assets.fetch_add(1, Ordering::SeqCst);
                             }
@@ -337,18 +329,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
                 let pages_count = saved_pages.load(Ordering::SeqCst);
                 pb_shared.set_position(pages_count as u64);
 
-                // Show folder/file name instead of just index.md
-                let display_name = if out_path.file_name().unwrap_or_default() == "index.md" {
-                    // Show parent directory name for index.md files
-                    out_path.parent()
-                        .and_then(|p| p.file_name())
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_else(|| "root".to_string())
-                } else {
-                    out_path.file_name().unwrap_or_default().to_string_lossy().to_string()
-                };
-
-                pb_shared.set_message(format!("Saved: {}", display_name));
+                // Avoid per-task "Saved" messages; main loop shows overall crawling status
 
                 // Use debug instead of info to avoid interfering with progress bar
                 debug!("Saved {}", out_path.display());

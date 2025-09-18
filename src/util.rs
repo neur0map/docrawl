@@ -45,6 +45,10 @@ pub fn path_for_url(output_root: &Path, base: &Url, target: &Url) -> PathBuf {
 
     // Determine filename
     let (mut file_stem, ext): (String, &str) = if path.ends_with('/') || path.is_empty() || segments.is_empty() {
+        // Directory or root path: keep directory segments and use index.md
+        if !segments.is_empty() {
+            rel.extend(segments.iter().map(|s| sanitize_segment(s)));
+        }
         ("index".to_string(), "md")
     } else if let Some(last) = segments.last() {
         if last.ends_with(".html") || last.ends_with(".htm") {
