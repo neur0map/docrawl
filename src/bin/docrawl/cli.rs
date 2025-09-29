@@ -72,4 +72,8 @@ pub struct Args {
     /// Fast preset: higher rate/concurrency and no assets.
     #[arg(long, action = ArgAction::SetTrue)]
     pub fast: bool,
+
+    /// Silence built-in status output (no progress or start/finish messages).
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub silence: bool,
 }

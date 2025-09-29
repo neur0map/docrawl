@@ -27,6 +27,7 @@ docrawl "https://docs.rust-lang.org"          # crawl with default depth
 docrawl "https://docs.python.org" --all       # full site crawl
 docrawl "https://react.dev" --depth 2         # shallow crawl
 docrawl "https://nextjs.org/docs" --fast      # quick scan without assets
+docrawl "https://example.com/docs" --silence  # suppress progress/status output
 ```
 
 ## Key Features
@@ -90,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `--selector <css>` | Custom content selector | Auto-detect |
 | `--fast` | Quick mode (no assets, rate=16) | - |
 | `--resume` | Continue previous crawl | - |
+| `--silence` | Suppress built-in progress/status output | - |
 
 ## Configuration
 

@@ -89,9 +89,12 @@ async fn main() {
             .map(|m| std::time::Duration::from_secs(m.saturating_mul(60))),
         resume: args.resume,
         config: cfgfile,
+        silence: args.silence,
     };
 
-    println!("Starting crawl...");
+    if !args.silence {
+        println!("Starting crawl...");
+    }
     if let Err(e) = docrawl::crawl(cfg).await {
         error!(error = %e, "Crawl failed");
         std::process::exit(1);

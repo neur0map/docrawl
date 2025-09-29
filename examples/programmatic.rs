@@ -12,6 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         concurrency: 8,
         timeout: None,
         resume: false,
+        silence: false,
         config: docrawl::Config {
             host_only: true,
             skip_assets: true,

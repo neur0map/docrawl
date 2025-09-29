@@ -1,6 +1,6 @@
 [package]
 name = "docrawl"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Docs-focused crawler library and CLI: crawl documentation sites, extract main content, convert to Markdown, mirror paths, and save with frontmatter."
 license = "MIT"

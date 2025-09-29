@@ -41,6 +41,7 @@ pub struct CrawlConfig {
     pub timeout: Option<Duration>,
     pub resume: bool,
     pub config: Config,
+    pub silence: bool,
 }
 
 pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>> {
@@ -90,16 +91,21 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
     let saved_assets = Arc::new(AtomicUsize::new(0));
     let stop_flag = Arc::new(AtomicBool::new(false));
 
-    // Create single progress bar with better formatting
-    let pb = ProgressBar::new_spinner();
-    pb.set_style(
-        ProgressStyle::with_template(
-            "{spinner:.cyan} [{elapsed_precise}] {msg} | Pages: {pos} | {per_sec}",
-        )
-        .unwrap()
-        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
-    );
-    pb.enable_steady_tick(std::time::Duration::from_millis(80));
+    // Create single progress bar with better formatting unless silenced
+    let pb = if cfg.silence {
+        None
+    } else {
+        let p = ProgressBar::new_spinner();
+        p.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.cyan} [{elapsed_precise}] {msg} | Pages: {pos} | {per_sec}",
+            )
+            .unwrap()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+        );
+        p.enable_steady_tick(std::time::Duration::from_millis(80));
+        Some(p)
+    };
 
     let pb_shared = pb.clone();
 
@@ -259,7 +265,9 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
                 // Fetch
                 // Keep position updated but avoid per-task messages to reduce flicker
-                pb_shared.set_position(saved_pages.load(Ordering::SeqCst) as u64);
+                if let Some(pb) = &pb_shared {
+                    pb.set_position(saved_pages.load(Ordering::SeqCst) as u64);
+                }
                 limiter.until_ready().await;
                 let resp = match req.send().await {
                     Ok(r) => r,
@@ -436,7 +444,9 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
                 // Update progress with better path display
                 let pages_count = saved_pages.load(Ordering::SeqCst);
-                pb_shared.set_position(pages_count as u64);
+                if let Some(pb) = &pb_shared {
+                    pb.set_position(pages_count as u64);
+                }
 
                 // Avoid per-task "Saved" messages; main loop shows overall crawling status
 
@@ -504,10 +514,12 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
     }
 
     let pb_main = pb.clone();
-    pb_main.set_message(format!(
-        "Starting crawl of {}",
-        base_arc.host_str().unwrap_or("site")
-    ));
+    if let Some(pb) = &pb_main {
+        pb.set_message(format!(
+            "Starting crawl of {}",
+            base_arc.host_str().unwrap_or("site")
+        ));
+    }
 
     // Track if we've processed any URLs yet
     let mut has_processed_any = false;
@@ -525,11 +537,13 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
         // Update pending count in UI
         if pending_count > 0 {
-            pb_main.set_message(format!(
-                "Crawling {} | Pending: {}",
-                base_arc.host_str().unwrap_or("site"),
-                pending_count
-            ));
+            if let Some(pb) = &pb_main {
+                pb.set_message(format!(
+                    "Crawling {} | Pending: {}",
+                    base_arc.host_str().unwrap_or("site"),
+                    pending_count
+                ));
+            }
             has_processed_any = true;
         }
 
@@ -587,12 +601,14 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
     let total_assets = saved_assets.load(Ordering::SeqCst);
     let elapsed = start_time.elapsed();
 
-    pb.finish_with_message(format!(
-        "Done! Crawled {} pages, {} assets in {:.1}s",
-        total_pages,
-        total_assets,
-        elapsed.as_secs_f32()
-    ));
+    if let Some(pb) = pb {
+        pb.finish_with_message(format!(
+            "Done! Crawled {} pages, {} assets in {:.1}s",
+            total_pages,
+            total_assets,
+            elapsed.as_secs_f32()
+        ));
+    }
     let _ = sink.finalize().await;
     Ok(Stats {
         pages: saved_pages.load(Ordering::SeqCst),
