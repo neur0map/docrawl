@@ -1,10 +1,12 @@
-use std::time::Instant;
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 
 // Test HTML samples from various sources
 const TEST_HTML_SAMPLES: &[(&str, &str)] = &[
-    ("hackerhub", r#"
+    (
+        "hackerhub",
+        r#"
 <!DOCTYPE html>
 <html>
 <head><title>HackerHub.me</title></head>
@@ -33,8 +35,11 @@ echo "Hello, Security World!"
 </main>
 </body>
 </html>
-"#),
-    ("documentation", r#"
+"#,
+    ),
+    (
+        "documentation",
+        r#"
 <!DOCTYPE html>
 <html>
 <head><title>API Documentation</title></head>
@@ -59,8 +64,11 @@ echo "Hello, Security World!"
 </article>
 </body>
 </html>
-"#),
-    ("blog_post", r#"
+"#,
+    ),
+    (
+        "blog_post",
+        r#"
 <!DOCTYPE html>
 <html>
 <head><title>My Blog Post</title></head>
@@ -90,28 +98,32 @@ echo "Hello, Security World!"
 </article>
 </body>
 </html>
-"#),
+"#,
+    ),
 ];
 
 fn main() {
     println!("=== HTML to Markdown Benchmark ===\n");
-    
+
     for (name, html) in TEST_HTML_SAMPLES {
         println!("Testing sample: {}", name);
-        
+
         // Test fast_html2md
         let start = Instant::now();
         let result_fast = html2md::rewrite_html(html, false);
         let duration_fast = start.elapsed();
-        
+
         println!("  fast_html2md conversion time: {:?}", duration_fast);
         println!("  fast_html2md output length: {} chars", result_fast.len());
-        println!("  fast_html2md output preview:\n{}", &result_fast[..result_fast.len().min(200)]);
+        println!(
+            "  fast_html2md output preview:\n{}",
+            &result_fast[..result_fast.len().min(200)]
+        );
         if result_fast.len() > 200 {
             println!("  ...");
         }
         println!();
-        
+
         // Save output for comparison
         let output_dir = Path::new("benchmark_outputs");
         fs::create_dir_all(output_dir).ok();
@@ -120,6 +132,6 @@ fn main() {
         println!("  Saved to: {:?}", output_file);
         println!();
     }
-    
+
     println!("Benchmark completed. Check benchmark_outputs/ directory for results.");
 }

@@ -1,10 +1,12 @@
-use std::time::Instant;
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 
 // Test HTML samples from various sources
 const TEST_HTML_SAMPLES: &[(&str, &str)] = &[
-    ("hackerhub", r#"
+    (
+        "hackerhub",
+        r#"
 <!DOCTYPE html>
 <html>
 <head><title>HackerHub.me</title></head>
@@ -33,8 +35,11 @@ echo "Hello, Security World!"
 </main>
 </body>
 </html>
-"#),
-    ("documentation", r#"
+"#,
+    ),
+    (
+        "documentation",
+        r#"
 <!DOCTYPE html>
 <html>
 <head><title>API Documentation</title></head>
@@ -59,8 +64,11 @@ echo "Hello, Security World!"
 </article>
 </body>
 </html>
-"#),
-    ("blog_post", r#"
+"#,
+    ),
+    (
+        "blog_post",
+        r#"
 <!DOCTYPE html>
 <html>
 <head><title>My Blog Post</title></head>
@@ -90,34 +98,38 @@ echo "Hello, Security World!"
 </article>
 </body>
 </html>
-"#),
+"#,
+    ),
 ];
 
 fn main() {
     println!("=== HTML to Markdown Comparison Benchmark ===\n");
-    
+
     let mut total_fast_time = std::time::Duration::new(0, 0);
     let mut total_fast_chars = 0;
-    
+
     for (name, html) in TEST_HTML_SAMPLES {
         println!("Testing sample: {}", name);
-        
+
         // Test fast_html2md
         let start = Instant::now();
         let result_fast = html2md::rewrite_html(html, false);
         let duration_fast = start.elapsed();
-        
+
         total_fast_time += duration_fast;
         total_fast_chars += result_fast.len();
-        
+
         println!("  fast_html2md conversion time: {:?}", duration_fast);
         println!("  fast_html2md output length: {} chars", result_fast.len());
-        println!("  fast_html2md output preview:\n{}", &result_fast[..result_fast.len().min(300)]);
+        println!(
+            "  fast_html2md output preview:\n{}",
+            &result_fast[..result_fast.len().min(300)]
+        );
         if result_fast.len() > 300 {
             println!("  ...");
         }
         println!();
-        
+
         // Save output for comparison
         let output_dir = Path::new("comparison_outputs");
         fs::create_dir_all(output_dir).ok();
@@ -126,12 +138,15 @@ fn main() {
         println!("  Saved to: {:?}", output_file);
         println!();
     }
-    
+
     println!("=== Summary ===");
     println!("Total fast_html2md time: {:?}", total_fast_time);
     println!("Total fast_html2md chars: {}", total_fast_chars);
-    println!("Average fast_html2md time per sample: {:?}", total_fast_time / TEST_HTML_SAMPLES.len() as u32);
+    println!(
+        "Average fast_html2md time per sample: {:?}",
+        total_fast_time / TEST_HTML_SAMPLES.len() as u32
+    );
     println!();
-    
+
     println!("Comparison completed. Check comparison_outputs/ directory for results.");
 }
