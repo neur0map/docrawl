@@ -347,7 +347,7 @@ pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>
 
                 let page = extract_page(&final_url, &body, config.selectors.as_deref());
                 let sanitized_html = sanitize_html_for_md(&final_url, &page.main_html);
-                let mut md = html2md::parse_html(&sanitized_html);
+                let mut md = html2md::rewrite_html(&sanitized_html, false);
                 let (md_checked, security_flags) = sanitize_markdown(&md);
                 md = md_checked;
                 let out_path = path_for_url(&output_dir, &base, &final_url);

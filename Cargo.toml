@@ -32,7 +32,7 @@ reqwest-retry = "0.7"
 # HTML parsing & cleaning
 scraper = "0.24"
 lol_html = "2.6"
-html2md = "0.2"
+fast_html2md = "0.0.48"
 soup = "0.5"
 
 # URL & deduping
@@ -63,6 +63,14 @@ pathdiff = "0.2"
 async-trait = "0.1"
 bytes = "1"
 futures = "0.3.31"
+
+[[example]]
+name = "benchmark"
+path = "examples/benchmark.rs"
+
+[[example]]
+name = "comparison_benchmark"
+path = "examples/comparison_benchmark.rs"
 
 [lib]
 name = "docrawl"
