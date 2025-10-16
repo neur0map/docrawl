@@ -2,8 +2,6 @@
 
 # docrawl
 
-```text
-
                                                                            
 @@@@@@@    @@@@@@    @@@@@@@  @@@@@@@    @@@@@@   @@@  @@@  @@@  @@@       
 @@@@@@@@  @@@@@@@@  @@@@@@@@  @@@@@@@@  @@@@@@@@  @@@  @@@  @@@  @@@       
@@ -16,8 +14,6 @@
  :::: ::  ::::: ::   ::: :::  ::   :::  ::   :::   :::: :: :::    :: ::::  
 :: :  :    : :  :    :: :: :   :   : :   :   : :    :: :  : :    : :: : :  
                                                                            
-
-```
 
 **A documentation-focused web crawler that converts sites to clean Markdown while preserving structure and staying polite.**
 
