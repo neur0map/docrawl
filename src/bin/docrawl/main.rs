@@ -1,9 +1,10 @@
 use std::path::PathBuf;
+use std::process::Command;
 
 mod cli;
 
 use clap::Parser;
-use tracing::error;
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +23,39 @@ async fn main() {
 
     let args = cli::Args::parse();
 
-    let base_url = match url::Url::parse(&args.url) {
+    // Handle --update flag
+    if args.update {
+        info!("Updating docrawl to the latest version from crates.io...");
+        
+        let output = Command::new("cargo")
+            .args(&["install", "docrawl", "--force"])
+            .output();
+            
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    info!("docrawl updated successfully!");
+                    println!("{}", String::from_utf8_lossy(&result.stdout));
+                } else {
+                    error!("Failed to update docrawl");
+                    eprintln!("{}", String::from_utf8_lossy(&result.stderr));
+                    std::process::exit(1);
+                }
+            }
+            Err(e) => {
+                error!("Failed to run cargo install: {}", e);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    let url = args.url.unwrap_or_else(|| {
+        error!("URL is required when not using --update");
+        std::process::exit(2);
+    });
+
+    let base_url = match url::Url::parse(&url) {
         Ok(u) => u,
         Err(e) => {
             error!(error = %e, "Invalid URL");

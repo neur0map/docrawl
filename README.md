@@ -2,9 +2,19 @@
 
 # docrawl
 
-A documentation-focused web crawler that converts sites to clean Markdown while preserving structure and staying polite.
+```text
+______   _____  _______  ______ _______ _  _  _
+|     \ |     | |       |_____/ |_____| |  |  | |
+|_____/ |_____| |_____  |    \_ |     | |__|__| |_____
+```
+
+**A documentation-focused web crawler that converts sites to clean Markdown while preserving structure and staying polite.**
 
 [**Demo Video**](https://youtu.be/aEBA0nFWaPE) • [**Crates.io**](https://crates.io/crates/docrawl) • [**GitHub**](https://github.com/neur0map/docrawl)
+
+[![Crates.io](https://img.shields.io/crates/v/docrawl.svg)](https://crates.io/crates/docrawl)
+[![Documentation](https://docs.rs/docrawl/badge.svg)](https://docs.rs/docrawl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
@@ -28,6 +38,7 @@ docrawl "https://docs.python.org" --all       # full site crawl
 docrawl "https://react.dev" --depth 2         # shallow crawl
 docrawl "https://nextjs.org/docs" --fast      # quick scan without assets
 docrawl "https://example.com/docs" --silence  # suppress progress/status output
+docrawl --update                              # update to latest version
 ```
 
 ## Key Features
@@ -37,7 +48,7 @@ docrawl "https://example.com/docs" --silence  # suppress progress/status output
 - **Path-mirroring structure** - Maintains original URL hierarchy as folders with `index.md` files
 - **Polite crawling** - Respects robots.txt, rate limits, and sitemap hints
 - **Security-first** - Sanitizes content, detects prompt injections, quarantines suspicious pages
-- **Resumable sessions** - Persistent cache allows stopping and continuing crawls
+- **Self-updating** - Built-in update mechanism via `docrawl --update`
 
 ## Why docrawl?
 
@@ -92,6 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `--fast` | Quick mode (no assets, rate=16) | - |
 | `--resume` | Continue previous crawl | - |
 | `--silence` | Suppress built-in progress/status output | - |
+| `--update` | Update to latest version from crates.io | - |
 
 ## Configuration
 
@@ -128,6 +140,30 @@ source_url: https://example.com/page
 fetched_at: 2025-01-18T12:00:00Z
 ---
 ```
+
+## Performance
+
+docrawl is optimized for speed and efficiency:
+
+- **Fast HTML to Markdown conversion** using `fast_html2md`
+- **Concurrent processing** with configurable worker pools
+- **Intelligent rate limiting** to respect server resources
+- **Persistent caching** to avoid duplicate work
+- **Memory-efficient streaming** for large sites
+
+## Security
+
+docrawl includes built-in security features:
+
+- **Content sanitization** removes potentially harmful HTML
+- **Prompt injection detection** identifies and quarantines suspicious content
+- **URL validation** prevents malicious redirects
+- **File system sandboxing** restricts output to specified directories
+- **Rate limiting** prevents overwhelming target servers
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
 

@@ -64,6 +64,9 @@ async-trait = "0.1"
 bytes = "1"
 futures = "0.3.31"
 
+# Self-update
+self_update = "0.41"
+
 [[example]]
 name = "benchmark"
 path = "examples/benchmark.rs"

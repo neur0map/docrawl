@@ -11,7 +11,7 @@ use std::path::PathBuf;
 )]
 pub struct Args {
     /// The starting URL to crawl
-    pub url: String,
+    pub url: Option<String>,
 
     /// Crawl entire site (overrides --depth)
     #[arg(long, action = ArgAction::SetTrue)]
@@ -76,4 +76,8 @@ pub struct Args {
     /// Silence built-in status output (no progress or start/finish messages).
     #[arg(long, action = ArgAction::SetTrue)]
     pub silence: bool,
+
+    /// Update docrawl to the latest version from crates.io.
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub update: bool,
 }
