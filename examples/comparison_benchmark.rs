@@ -102,6 +102,14 @@ echo "Hello, Security World!"
     ),
 ];
 
+/// Runs a small benchmark that converts predefined HTML samples to Markdown, measures conversion time and output size, and writes the results to the `comparison_outputs/` directory.
+///
+/// # Examples
+///
+/// ```
+/// // Executes the comparison benchmark (prints timing, previews, and saves outputs).
+/// main();
+/// ```
 fn main() {
     println!("=== HTML to Markdown Comparison Benchmark ===\n");
 

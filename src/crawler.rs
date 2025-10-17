@@ -44,6 +44,43 @@ pub struct CrawlConfig {
     pub silence: bool,
 }
 
+/// Performs a concurrent crawl based on the provided configuration and writes discovered pages and assets to the output directory.
+///
+/// This function orchestrates the full crawl lifecycle: client and rate-limiter setup, optional sitemap seeding, robots.txt enforcement, concurrent fetching of pages and assets, HTML sanitization and Markdown conversion, asset saving and link discovery, progress reporting, and finalization of persisted output. It honors the options in `cfg` such as scope, depth, concurrency, rate limits, timeouts, resume behavior, and asset policies.
+///
+/// # Returns
+///
+/// `Ok(Stats)` containing totals for pages and assets saved on success, or an `Err` if setup, network, or I/O operations fail.
+///
+/// # Errors
+///
+/// Returns an error when required initialization or I/O/network operations fail (for example: invalid base URL, inability to create the output directory, HTTP client construction failures, or failures saving files).
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::time::Duration;
+/// # use url::Url;
+/// # use std::path::PathBuf;
+/// # use docrawl::{CrawlConfig, crawl};
+/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+/// let cfg = CrawlConfig {
+///     base_url: Url::parse("https://example.com/").unwrap(),
+///     output_dir: PathBuf::from("out"),
+///     user_agent: "docrawl/1.0".to_string(),
+///     max_depth: Some(2),
+///     rate_limit_per_sec: 5,
+///     follow_sitemaps: true,
+///     concurrency: 4,
+///     timeout: Some(Duration::from_secs(300)),
+///     resume: false,
+///     config: Default::default(),
+///     silence: false,
+/// };
+/// let stats = crawl(cfg).await.expect("crawl failed");
+/// println!("Crawled {} pages and {} assets", stats.pages, stats.assets);
+/// # });
+/// ```
 pub async fn crawl(cfg: CrawlConfig) -> Result<Stats, Box<dyn std::error::Error>> {
     let base_origin = origin_of(&cfg.base_url)?;
     std::fs::create_dir_all(&cfg.output_dir)?;

@@ -102,6 +102,18 @@ echo "Hello, Security World!"
     ),
 ];
 
+/// Runs a simple benchmark that converts embedded HTML samples to Markdown, prints timing and preview information, and saves each conversion to the `benchmark_outputs/` directory.
+///
+/// The program iterates the built-in `TEST_HTML_SAMPLES`, converts each sample using `html2md::rewrite_html(html, false)`,
+/// prints the conversion time, output length, and a 200-character preview, and writes the full Markdown output to
+/// `benchmark_outputs/{name}_fast_html2md.md`.
+///
+/// # Examples
+///
+/// ```
+/// // Executes the benchmark; output files are written to `benchmark_outputs/`.
+/// examples::benchmark::main();
+/// ```
 fn main() {
     println!("=== HTML to Markdown Benchmark ===\n");
 
